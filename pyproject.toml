@@ -12,6 +12,11 @@ psycopg2-binary = "^2.9.10"
 pillow = "^11.3.0"
 djangorestframework = "^3.16.0"
 python-dotenv = "^1.1.1"
+ipython = "^9.4.0"
+django-stubs = "^5.2.1"
+mypy = "^1.16.1"
+pydantic = "^2.11.7"
+djangorestframework-stubs = "^3.16.0"
 
 [tool.poetry.group.lint.dependencies]
 black = "^25.1.0"
@@ -70,3 +75,6 @@ exclude =  [
     "dist",
     "migrations"
 ]
+[tool.django-stubs]
+django_settings_module = "config.settings"
+strict_settings = true
