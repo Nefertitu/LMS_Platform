@@ -1,0 +1,50 @@
+[
+  {
+    "model": "materials.payments",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "payment_date": "2025-07-07T18:00:00Z",
+      "lesson": 3,
+      "course": 1,
+      "amount": "20000.00",
+      "payment_method": "Перевод на счет"
+    }
+  },
+  {
+    "model": "materials.payments",
+    "pk": 2,
+    "fields": {
+      "user": 9,
+      "payment_date": "2025-06-07T12:00:00Z",
+      "lesson": 2,
+      "course": 2,
+      "amount": "19000.00",
+      "payment_method": "Перевод на счет"
+    }
+  },
+  {
+    "model": "materials.payments",
+    "pk": 3,
+    "fields": {
+      "user": 2,
+      "payment_date": null,
+      "lesson": null,
+      "course": 1,
+      "amount": "160000.00",
+      "payment_method": "Перевод на счет"
+    }
+  },
+  {
+    "model": "materials.payments",
+    "pk": 4,
+    "fields": {
+      "user": 1,
+      "payment_date": "2025-07-07T12:00:00Z",
+      "lesson": 1,
+      "course": 1,
+      "amount": "22000.00",
+      "payment_method": "Наличные"
+    }
+  }
+]
