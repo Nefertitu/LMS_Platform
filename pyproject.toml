@@ -17,6 +17,7 @@ django-stubs = "^5.2.1"
 mypy = "^1.16.1"
 pydantic = "^2.11.7"
 djangorestframework-stubs = "^3.16.0"
+django-filter = "^25.1"
 
 [tool.poetry.group.lint.dependencies]
 black = "^25.1.0"
@@ -29,6 +30,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.mypy]
+ignore_missing_imports = true
 disallow_untyped_defs = true
 no_implicit_optional = true
 namespace_packages = true

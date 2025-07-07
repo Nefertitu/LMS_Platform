@@ -10,11 +10,11 @@ class CourseAdmin(admin.ModelAdmin):
 
     list_display = (
         "id",
-        "title",
+        "course_title",
         "description",
     )
-    list_filter = ("title",)
-    search_fields = ("title",)
+    list_filter = ("course_title",)
+    search_fields = ("course_title",)
 
 
 @admin.register(Lesson)
