@@ -12,10 +12,15 @@ class CourseSerializer(serializers.ModelSerializer):
     """Сериализатор для модели 'Course'"""
 
     lessons = SerializerMethodField()
+    lessons_count = SerializerMethodField()
 
     def get_lessons(self, course: Course) -> list:
-        """"""
+        """Возвращает список названий уроков для указанного курса"""
         return [lesson.title for lesson in Lesson.objects.filter(course=course)]
+
+    def get_lessons_count(self, course) -> int:
+        """Возвращает количество уроков, связанных с указанным курсом"""
+        return course.lessons.count()
 
     class Meta:
         model = Course

@@ -18,6 +18,7 @@ mypy = "^1.16.1"
 pydantic = "^2.11.7"
 djangorestframework-stubs = "^3.16.0"
 django-filter = "^25.1"
+djangorestframework-simplejwt = "^5.5.0"
 
 [tool.poetry.group.lint.dependencies]
 black = "^25.1.0"
