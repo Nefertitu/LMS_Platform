@@ -1,6 +1,5 @@
 from typing import List, Optional
 
-from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.request import Request
@@ -18,6 +17,10 @@ class UserProfileViewSet(viewsets.ViewSet):
 
         if self.action == "create":
             return [permissions.AllowAny()]
+        elif self.action == "list":
+            return [permissions.IsAdminUser()]
+        elif self.action == "destroy":
+            return [permissions.IsAdminUser()]
         return [permissions.IsAuthenticated()]
 
     def list(self, request: Request) -> Response:
@@ -69,5 +72,5 @@ class UserProfileViewSet(viewsets.ViewSet):
 
         queryset = User.objects.all()
         user = get_object_or_404(queryset, pk=pk)
-        serializer = UserProfileSerializer(user)
-        return Response(serializer.data)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

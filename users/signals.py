@@ -10,9 +10,7 @@ from users.models import User
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_auth_token(
-    sender: Type[Model], instance: User, created: bool = False, **kwargs: Any
-) -> None:
+def create_auth_token(sender: Type[Model], instance: User, created: bool = False, **kwargs: Any) -> None:
     """Сигнал для автоматического создания токена при создании нового пользователя"""
     if created:
         Token.objects.create(user=instance)
