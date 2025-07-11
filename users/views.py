@@ -1,12 +1,13 @@
-from typing import List
+from typing import List, Any, cast
 
-from rest_framework import permissions, viewsets, serializers
+from rest_framework import permissions, serializers, viewsets
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import AllowAny
+from rest_framework.serializers import BaseSerializer
 
 from users.models import User
 from users.permissions import IsOwnerOnly
-from users.serializers import UserProfileSerializer, PublicUserSerializer
+from users.serializers import PublicUserSerializer, UserProfileSerializer
 
 
 class UserCreateApiView(CreateAPIView):
@@ -16,25 +17,26 @@ class UserCreateApiView(CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Метод для создания профиля пользователя (POST /register/)"""
 
         user = serializer.save(is_active=True)
         user.set_password(user.password)
         user.save()
 
+
 class UserProfileViewSet(viewsets.ModelViewSet):
     """Управление пользователями (требуется аутентификация)"""
 
-    serializer_class = [UserProfileSerializer, PublicUserSerializer]
+    serializer_class = UserProfileSerializer
     queryset = User.objects.all()
 
     def get_serializer_class(self) -> type[serializers.BaseSerializer]:
         """Динамический выбор сериализатора"""
 
         if self.action == "list":
-           if not (self.request.user.is_staff):
-               return PublicUserSerializer
+            if not (self.request.user.is_staff):
+                return PublicUserSerializer
 
         elif self.action == "retrieve":
             object = self.get_object()
@@ -62,11 +64,10 @@ class UserProfileViewSet(viewsets.ModelViewSet):
             return [IsOwnerOnly()]
         return [permissions.IsAuthenticated()]
 
-    def perform_update(self, serializer) -> None:
+    def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         """Метод для выполнения дополнительной обработки при обновлении"""
 
         if "password" in serializer.validated_data:
-            serializer.instance.set_password(serializer.validated_data["password"])
+            user = cast(User, serializer.instance)
+            user.set_password(serializer.validated_data["password"])
         serializer.save()
-
-
