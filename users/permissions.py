@@ -1,7 +1,5 @@
 from typing import Any, Protocol
 
-from django.db import models
-from django.db.models import Model
 from rest_framework import permissions
 from rest_framework.request import Request
 
