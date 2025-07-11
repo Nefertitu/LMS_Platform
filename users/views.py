@@ -1,13 +1,13 @@
 from typing import List
 
-from django.db.models import QuerySet
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, viewsets, serializers
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import AllowAny
 
 from users.models import User
 from users.permissions import IsOwnerOnly
-from users.serializers import UserProfileSerializer
+from users.serializers import UserProfileSerializer, PublicUserSerializer
+
 
 class UserCreateApiView(CreateAPIView):
     """Класс для создания профиля пользователя"""
@@ -26,33 +26,41 @@ class UserCreateApiView(CreateAPIView):
 class UserProfileViewSet(viewsets.ModelViewSet):
     """Управление пользователями (требуется аутентификация)"""
 
-    serializer_class = UserProfileSerializer
+    serializer_class = [UserProfileSerializer, PublicUserSerializer]
     queryset = User.objects.all()
+
+    def get_serializer_class(self) -> type[serializers.BaseSerializer]:
+        """Динамический выбор сериализатора"""
+
+        if self.action == "list":
+           if not (self.request.user.is_staff):
+               return PublicUserSerializer
+
+        elif self.action == "retrieve":
+            object = self.get_object()
+            if not (self.request.user.is_staff or self.request.user == object.email):
+                return PublicUserSerializer
+
+        return UserProfileSerializer
 
     def get_permissions(self) -> List[permissions.BasePermission]:
         """
         Управление разрешениями:
-        (GET /users/        # Список (для админов)
+        (GET /users/        # Список
         GET /users/{id}/    # Просмотр
-        PUT /users/{id}/    # Полное обновление
-        PATCH /users/{id}/  # Частичное обновление
+        PUT /users/{id}/    # Полное обновление (только владелец)
+        PATCH /users/{id}/  # Частичное обновление (только владелец)
         DELETE /users/{id}/ # Удаление (только админы)
         )
         """
 
-        if self.action in ["list", "destroy"]:
+        if self.action in ["list", "retrieve"]:
+            return [permissions.IsAuthenticated()]
+        elif self.action == "destroy":
             return [permissions.IsAdminUser()]
         elif self.action in ["update", "partial_update"]:
             return [IsOwnerOnly()]
         return [permissions.IsAuthenticated()]
-
-    def get_queryset(self) -> QuerySet:
-        """Фильтрация данных - обычные пользователи видят только свой профиль,
-        админы - все"""
-
-        if self.request.user.is_staff:
-            return super().get_queryset()
-        return super().get_queryset().filter(pk=self.request.user.pk)
 
     def perform_update(self, serializer) -> None:
         """Метод для выполнения дополнительной обработки при обновлении"""

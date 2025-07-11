@@ -1,4 +1,3 @@
-from time import strptime
 from typing import Optional
 
 from rest_framework import serializers
@@ -30,7 +29,11 @@ class CourseSerializer(serializers.ModelSerializer):
 class LessonSerializer(serializers.ModelSerializer):
     """Сериализатор для модели 'Lesson'"""
 
-    course = CourseSerializer()
+    course = serializers.PrimaryKeyRelatedField(
+        queryset=Course.objects.all(),
+        required=False,
+        allow_null=True
+    )
 
     class Meta:
         model = Lesson

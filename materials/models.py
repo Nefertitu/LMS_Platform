@@ -54,7 +54,7 @@ class Lesson(models.Model):
     link = models.URLField(
         max_length=500, verbose_name="ссылка на видео", blank=True, null=True, help_text="Добавьте ссылку на видео"
     )
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="lessons", verbose_name="Курс")
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="lessons", verbose_name="Курс", blank=True, null=True)
     owner = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

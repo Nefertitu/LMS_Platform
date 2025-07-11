@@ -10,7 +10,7 @@ class IsOwnerOnly(permissions.BasePermission):
 
     def has_object_permission(self, request: Request, view: Any, obj: Model) -> bool:
         """Проверяет, является ли пользователь владельцем объекта"""
-        return obj == request.user
+        return obj.owner == request.user
 
 
 class IsModer(permissions.BasePermission):
@@ -18,4 +18,4 @@ class IsModer(permissions.BasePermission):
 
     def has_permission(self, request: Request, view: Any) -> bool:
         """Проверяет, является ли пользователь владельцем объекта"""
-        return request.user.proups.filter(name="moders").exists()
+        return request.user.groups.filter(name="moders").exists()
