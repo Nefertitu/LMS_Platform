@@ -1,9 +1,9 @@
-from typing import Any, Sequence, Union, List
+from typing import Any, Sequence, Union
 
 from django.db.models import QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, generics, serializers, viewsets
-from rest_framework.permissions import OR, IsAuthenticated, BasePermission, OperandHolder, SingleOperandHolder
+from rest_framework import filters, generics, viewsets
+from rest_framework.permissions import IsAuthenticated, BasePermission, OperandHolder, SingleOperandHolder
 from rest_framework.serializers import BaseSerializer
 
 from materials.models import Course, Lesson, Payments
@@ -33,8 +33,6 @@ class CourseViewSet(viewsets.ModelViewSet):
         if user.groups.filter(name="moders").exists():
             return Course.objects.all()
         return Course.objects.filter(owner=user)
-
-
 
     def get_permissions(self) -> Sequence[Any]:
         """

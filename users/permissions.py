@@ -9,6 +9,7 @@ from users.models import User
 class HasOwner(Protocol):
     owner: User
 
+
 class IsOwnerOnly(permissions.BasePermission):
     """Разрешение только для владельца объекта"""
 
