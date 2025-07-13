@@ -17,16 +17,16 @@ class CourseSerializer(serializers.ModelSerializer):
     is_subscribed = SerializerMethodField()
 
     def get_lessons(self, course: Course) -> list:
-        """Возвращает список названий уроков для указанного курса"""
+        """Возвращает список названий уроков для данного курса"""
         return [lesson.title for lesson in Lesson.objects.filter(course=course)]
 
     def get_lessons_count(self, course: Course) -> int:
-        """Возвращает количество уроков, связанных с указанным курсом"""
+        """Возвращает количество уроков, связанных с данным курсом"""
 
         return course.lessons.count()
 
     def get_is_subscribed(self, user: User) -> list:
-        """Возвращает список названий уроков для указанного курса"""
+        """Возвращает список email-адресов подписчиков для данного курса"""
         return [user.user.email for user in Subscription.objects.filter(is_active=True)]
 
     class Meta:
@@ -46,7 +46,7 @@ class LessonSerializer(serializers.ModelSerializer):
 
 
 class LessonDetailSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели Урок с дополнительной информацией о количестве уроков
+    """Сериализатор для модели 'Lesson' с дополнительной информацией о количестве уроков
     того же курса"""
 
     count_lessons_one_course = SerializerMethodField()
@@ -104,18 +104,18 @@ class PaymentsSerializer(ModelSerializer):
         )
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    """Сериализатор для подписок"""
+    """Сериализатор для модели 'Subscription'"""
 
     course_title = serializers.SerializerMethodField()
     user_email = serializers.SerializerMethodField()
     created_at = serializers.SerializerMethodField()
 
     def get_course_title(self, instance: Subscription) -> Optional[str]:
-        """Возвращает название курса"""
+        """Возвращает название курса данной подписки"""
         return str(instance.course.course_title) if instance.course else None
 
     def get_user_email(self, instance: Subscription) -> Optional[str]:
-        """Возвращает email пользователя"""
+        """Возвращает email пользователя-подписчика"""
         return str(instance.user.email) if instance.user else None
 
     def get_created_at(self, instance: Subscription) -> Optional[str]:

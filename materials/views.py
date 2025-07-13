@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 
 from materials.models import Course, Lesson, Payments, Subscription
+from materials.paginators import MaterialsPaginator
 from materials.serializers import CourseSerializer, LessonDetailSerializer, LessonSerializer, PaymentsSerializer, \
     SubscriptionSerializer
 from users.permissions import IsModer, IsOwnerOnly
@@ -21,6 +22,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = MaterialsPaginator
 
     PermissionClass = Union[
         type[BasePermission],
@@ -79,6 +81,7 @@ class LessonListAPIView(generics.ListAPIView):
         IsAuthenticated,
         IsModer | IsOwnerOnly,
     )
+    pagination_class = MaterialsPaginator
 
     def get_queryset(self) -> QuerySet[Lesson]:
         """Фильтрует уроки в зависимости от прав пользователя"""
@@ -131,6 +134,7 @@ class PaymentsViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentsSerializer
     queryset = Payments.objects.all()
     permission_classes = (IsAuthenticated, IsOwnerOnly)
+    pagination_class = MaterialsPaginator
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = (
@@ -187,6 +191,7 @@ class SubscriptionCoursesAPIView(generics.ListAPIView):
         serializer_class = SubscriptionSerializer
         queryset = Subscription.objects.all()
         permission_classes = [IsAuthenticated, IsOwnerOnly]
+        pagination_class = MaterialsPaginator
 
         def get_queryset(self) -> QuerySet[Subscription]:
             """Фильтрует курсы в зависимости от прав пользователя"""
