@@ -1,4 +1,3 @@
-from time import strptime
 from typing import Optional
 
 from rest_framework import serializers
@@ -18,7 +17,7 @@ class CourseSerializer(serializers.ModelSerializer):
         """Возвращает список названий уроков для указанного курса"""
         return [lesson.title for lesson in Lesson.objects.filter(course=course)]
 
-    def get_lessons_count(self, course) -> int:
+    def get_lessons_count(self, course: Course) -> int:
         """Возвращает количество уроков, связанных с указанным курсом"""
         return course.lessons.count()
 
@@ -30,7 +29,7 @@ class CourseSerializer(serializers.ModelSerializer):
 class LessonSerializer(serializers.ModelSerializer):
     """Сериализатор для модели 'Lesson'"""
 
-    course = CourseSerializer()
+    course = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Lesson

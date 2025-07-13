@@ -20,6 +20,15 @@ class Course(models.Model):
         null=True,
         help_text="Введите описание курса",
     )
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name="Владелец",
+        help_text="Укажите владельца курса",
+        related_name="owner_courses",
+    )
 
     def __str__(self) -> str:
         """Строковое отображение модели Курс"""
@@ -45,7 +54,18 @@ class Lesson(models.Model):
     link = models.URLField(
         max_length=500, verbose_name="ссылка на видео", blank=True, null=True, help_text="Добавьте ссылку на видео"
     )
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="lessons", verbose_name="Курс")
+    course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, related_name="lessons", verbose_name="Курс", blank=True, null=True
+    )
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name="Владелец",
+        help_text="Укажите владельца урока",
+        related_name="owner_lessons",
+    )
 
     def __str__(self) -> str:
         """Строковое отображение модели Урок"""

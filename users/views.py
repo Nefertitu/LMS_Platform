@@ -1,76 +1,73 @@
-from typing import List, Optional
+from typing import List, Any, cast
 
-from django.shortcuts import get_object_or_404
-from rest_framework import permissions, status, viewsets
-from rest_framework.request import Request
-from rest_framework.response import Response
+from rest_framework import permissions, serializers, viewsets
+from rest_framework.generics import CreateAPIView
+from rest_framework.permissions import AllowAny
+from rest_framework.serializers import BaseSerializer
 
 from users.models import User
-from users.serializers import UserProfileSerializer
+from users.permissions import IsOwnerOnly
+from users.serializers import PublicUserSerializer, UserProfileSerializer
 
 
-class UserProfileViewSet(viewsets.ViewSet):
-    """ViewSet для редактирования профиля пользователя"""
+class UserCreateApiView(CreateAPIView):
+    """Класс для создания профиля пользователя"""
+
+    serializer_class = UserProfileSerializer
+    queryset = User.objects.all()
+    permission_classes = (AllowAny,)
+
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
+        """Метод для создания профиля пользователя (POST /register/)"""
+
+        user = serializer.save(is_active=True)
+        user.set_password(user.password)
+        user.save()
+
+
+class UserProfileViewSet(viewsets.ModelViewSet):
+    """Управление пользователями (требуется аутентификация)"""
+
+    serializer_class = UserProfileSerializer
+    queryset = User.objects.all()
+
+    def get_serializer_class(self) -> type[serializers.BaseSerializer]:
+        """Динамический выбор сериализатора"""
+
+        if self.action == "list":
+            if not (self.request.user.is_staff):
+                return PublicUserSerializer
+
+        elif self.action == "retrieve":
+            object = self.get_object()
+            if not (self.request.user.is_staff or self.request.user == object.email):
+                return PublicUserSerializer
+
+        return UserProfileSerializer
 
     def get_permissions(self) -> List[permissions.BasePermission]:
-        """Разрешение создания пользователя без аутентификации"""
+        """
+        Управление разрешениями:
+        (GET /users/        # Список
+        GET /users/{id}/    # Просмотр
+        PUT /users/{id}/    # Полное обновление (только владелец)
+        PATCH /users/{id}/  # Частичное обновление (только владелец)
+        DELETE /users/{id}/ # Удаление (только админы)
+        )
+        """
 
-        if self.action == "create":
-            return [permissions.AllowAny()]
-        elif self.action == "list":
-            return [permissions.IsAdminUser()]
+        if self.action in ["list", "retrieve"]:
+            return [permissions.IsAuthenticated()]
         elif self.action == "destroy":
             return [permissions.IsAdminUser()]
+        elif self.action in ["update", "partial_update"]:
+            return [IsOwnerOnly()]
         return [permissions.IsAuthenticated()]
 
-    def list(self, request: Request) -> Response:
-        """Метод для вывода списка пользователей"""
+    def perform_update(self, serializer: BaseSerializer[Any]) -> None:
+        """Метод для выполнения дополнительной обработки при обновлении"""
 
-        queryset = User.objects.all()
-        serializer = UserProfileSerializer(queryset, many=True)
-        return Response(serializer.data)
-
-    def retrieve(self, request: Request, pk: int) -> Response:
-        """Получить пользователя по ID (GET /users/<pk>/)"""
-
-        queryset = User.objects.all()
-        user = get_object_or_404(queryset, pk=pk)
-        serializer = UserProfileSerializer(user)
-        return Response(serializer.data)
-
-    def create(self, request: Request) -> Response:
-        """Метод для создания профиля пользователя (POST /users/)"""
-
-        serializer = UserProfileSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def update(self, request: Request, pk: int) -> Response:
-        """Метод для редактирования профиля пользователя (PUT /users/<pk>/)"""
-
-        user = get_object_or_404(User, pk=pk)
-        serializer = UserProfileSerializer(instance=user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def partial_update(self, request: Request, pk: int) -> Response:
-        """Частично обновить пользователя (PATCH /users/<pk>/)"""
-
-        user = get_object_or_404(User, pk=pk)
-        serializer = UserProfileSerializer(instance=user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def destroy(self, request: Request, pk: Optional[int]) -> Response:
-        """Метод для удаления профиля пользователя (PUT /users/<pk>/)"""
-
-        queryset = User.objects.all()
-        user = get_object_or_404(queryset, pk=pk)
-        user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if "password" in serializer.validated_data:
+            user = cast(User, serializer.instance)
+            user.set_password(serializer.validated_data["password"])
+        serializer.save()
