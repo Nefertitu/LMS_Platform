@@ -6,11 +6,11 @@ from rest_framework.serializers import ValidationError
 class LinkValidator:
     """Класс-валидатор для проверки, что ссылка не ведет на YouTube"""
 
-    def __init__(self, field: str):
+    def __init__(self, field: str) -> None:
         """Инициализирует валидатор с указанием имени поля для проверки"""
         self.field = field
 
-    def __call__(self, value: dict[str, Any]):
+    def __call__(self, value: dict[str, Any]) -> None:
         """Выполняет проверку ссылки при вызове экземпляра класса"""
 
         pattern = re.compile(r"^https?://(www\.)?youtube\.com/[^\s]+$")

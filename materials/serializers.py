@@ -4,8 +4,9 @@ from rest_framework import serializers
 from rest_framework.fields import SerializerMethodField
 from rest_framework.serializers import ModelSerializer
 
-from materials.models import Course, Lesson, Payments
+from materials.models import Course, Lesson, Payments, Subscription
 from materials.validators import LinkValidator
+from users.models import User
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -13,6 +14,7 @@ class CourseSerializer(serializers.ModelSerializer):
 
     lessons = SerializerMethodField()
     lessons_count = SerializerMethodField()
+    is_subscribed = SerializerMethodField()
 
     def get_lessons(self, course: Course) -> list:
         """Возвращает список названий уроков для указанного курса"""
@@ -20,7 +22,12 @@ class CourseSerializer(serializers.ModelSerializer):
 
     def get_lessons_count(self, course: Course) -> int:
         """Возвращает количество уроков, связанных с указанным курсом"""
+
         return course.lessons.count()
+
+    def get_is_subscribed(self, user: User) -> list:
+        """Возвращает список названий уроков для указанного курса"""
+        return [user.user.email for user in Subscription.objects.filter(is_active=True)]
 
     class Meta:
         model = Course
@@ -94,4 +101,33 @@ class PaymentsSerializer(ModelSerializer):
             "course",
             "lesson",
             "user_email",
+        )
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """Сериализатор для подписок"""
+
+    course_title = serializers.SerializerMethodField()
+    user_email = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
+
+    def get_course_title(self, instance: Subscription) -> Optional[str]:
+        """Возвращает название курса"""
+        return str(instance.course.course_title) if instance.course else None
+
+    def get_user_email(self, instance: Subscription) -> Optional[str]:
+        """Возвращает email пользователя"""
+        return str(instance.user.email) if instance.user else None
+
+    def get_created_at(self, instance: Subscription) -> Optional[str]:
+        """Форматирует дату создания подписки в строку"""
+        return instance.created_at.strftime("%d.%m.%Y %H:%m") if instance.created_at else None
+
+    class Meta:
+        model = Subscription
+        fields = (
+            "id",
+            "user_email",
+            "course_title",
+            "is_active",
+            "created_at",
         )

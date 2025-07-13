@@ -77,7 +77,7 @@ class Lesson(models.Model):
 
 
 class Payments(models.Model):
-    """Класс Платежи"""
+    """Модель Платежи"""
 
     CASH = "Наличные"
     TRANSFER = "Перевод на счет"
@@ -128,3 +128,46 @@ class Payments(models.Model):
         verbose_name = "Платеж"
         verbose_name_plural = "Платежи"
         ordering = ["payment_date", "amount"]
+
+
+class Subscription(models.Model):
+    """Модель Подписка"""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        verbose_name="Пользователь",
+        related_name="user_subscriptions",
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="course_subscriptions",
+        help_text="Курс по подписке",
+        blank=True,
+        null=True,
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Активна",
+        help_text="Отметка об активности подписки"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Дата создания"
+    )
+
+    def __str__(self) -> str | None:
+        """Строковое отображение модели Подписка"""
+        status = "активна" if self.is_active else "неактивна"
+        return f"Подписка пользователя {self.user.email} на курс {self.course.title} {status}"
+
+
+    class Meta:
+        verbose_name = "Подписка"
+        verbose_name_plural = "Подписки"
+        unique_together = ('user', 'course')
+
