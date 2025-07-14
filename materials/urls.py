@@ -9,7 +9,9 @@ from materials.views import (
     LessonListAPIView,
     LessonRetrieveAPIView,
     LessonUpdateAPIView,
-    PaymentsViewSet, SubscriptionAPIView, SubscriptionCoursesAPIView,
+    PaymentsViewSet,
+    SubscriptionAPIView,
+    SubscriptionCoursesAPIView,
 )
 
 app_name = MaterialsConfig.name
@@ -20,11 +22,11 @@ router.register(r"courses", CourseViewSet, basename="courses")
 router.register(r"payments", PaymentsViewSet, basename="payments")
 
 urlpatterns = [
-    path("lesson/create/", LessonCreateAPIView.as_view(), name="lesson_create"),
-    path("lesson/", LessonListAPIView.as_view(), name="lesson_list"),
-    path("lesson/<int:pk>/", LessonRetrieveAPIView.as_view(), name="lesson_detail"),
-    path("lesson/update/<int:pk>/", LessonUpdateAPIView.as_view(), name="lesson_update"),
-    path("lesson/delete/<int:pk>/", LessonDestroyAPIView.as_view(), name="lesson_delete"),
+    path("lesson/create/", LessonCreateAPIView.as_view(), name="lesson-create"),
+    path("lesson/", LessonListAPIView.as_view(), name="lesson-list"),
+    path("lesson/<int:pk>/", LessonRetrieveAPIView.as_view(), name="lesson-detail"),
+    path("lesson/update/<int:pk>/", LessonUpdateAPIView.as_view(), name="lesson-update"),
+    path("lesson/delete/<int:pk>/", LessonDestroyAPIView.as_view(), name="lesson-delete"),
     path("subscriptions/", SubscriptionAPIView.as_view(), name="subscriptions"),
-    path("subscriptions/courses/", SubscriptionCoursesAPIView.as_view(), name="subscriptions_list"),
+    path("subscriptions/courses/", SubscriptionCoursesAPIView.as_view(), name="subscriptions-list"),
 ] + router.urls

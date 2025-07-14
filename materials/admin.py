@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from materials.models import Course, Lesson, Payments
+from materials.models import Course, Lesson, Payments, Subscription
 
 
 @admin.register(Course)
@@ -35,3 +35,13 @@ class PaymentsAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "lesson", "course", "payment_date", "amount")
     list_filter = ("payment_date", "amount")
     search_fields = ("lesson", "course", "user")
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    """Администрирование подписок. Позволяет отслеживать
+    подписки, с возможностью фильтрации и поиска."""
+
+    list_display = ("id", "user", "course", "is_active")
+    list_filter = ("course", "user")
+    search_fields = ("course", "user")

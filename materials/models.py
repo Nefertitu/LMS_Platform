@@ -6,7 +6,9 @@ from users.models import User
 class Course(models.Model):
     """Модель Курс"""
 
-    course_title = models.CharField(max_length=200, verbose_name="название курса", help_text="Укажите название курса")
+    course_title = models.CharField(
+        max_length=200, verbose_name="название курса", blank=False, null=False, help_text="Укажите название курса"
+    )
     preview = models.ImageField(
         verbose_name="превью",
         upload_to="materials/preview",
@@ -22,9 +24,9 @@ class Course(models.Model):
     )
     owner = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
         verbose_name="Владелец",
         help_text="Укажите владельца курса",
         related_name="owner_courses",
@@ -37,6 +39,7 @@ class Course(models.Model):
     class Meta:
         verbose_name = "Курс"
         verbose_name_plural = "Курсы"
+        ordering = ["id"]
 
 
 class Lesson(models.Model):
@@ -74,6 +77,7 @@ class Lesson(models.Model):
     class Meta:
         verbose_name = "Урок"
         verbose_name_plural = "Уроки"
+        ordering = ["id"]
 
 
 class Payments(models.Model):
@@ -127,7 +131,7 @@ class Payments(models.Model):
     class Meta:
         verbose_name = "Платеж"
         verbose_name_plural = "Платежи"
-        ordering = ["payment_date", "amount"]
+        ordering = ["-id"]
 
 
 class Subscription(models.Model):
@@ -146,28 +150,20 @@ class Subscription(models.Model):
         on_delete=models.CASCADE,
         related_name="course_subscriptions",
         help_text="Курс по подписке",
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
     )
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name="Активна",
-        help_text="Отметка об активности подписки"
-    )
+    is_active = models.BooleanField(default=True, verbose_name="Активна", help_text="Отметка об активности подписки")
 
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Дата создания"
-    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
-    def __str__(self) -> str | None:
+    def __str__(self) -> str:
         """Строковое отображение модели Подписка"""
+        assert self.user is not None
         status = "активна" if self.is_active else "неактивна"
-        return f"Подписка пользователя {self.user.email} на курс {self.course.title} {status}"
-
+        return f"Подписка пользователя {self.user.email} на курс {self.course.course_title} {status}"
 
     class Meta:
         verbose_name = "Подписка"
         verbose_name_plural = "Подписки"
-        unique_together = ('user', 'course')
-
+        unique_together = ("user", "course")

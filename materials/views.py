@@ -1,19 +1,24 @@
+from pyexpat.errors import messages
 from typing import Any, Sequence, Union
 
 from django.db.models import QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
-from pyexpat.errors import messages
-from rest_framework import filters, generics, viewsets, status
+from rest_framework import filters, generics, status, viewsets
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import IsAuthenticated, BasePermission, OperandHolder, SingleOperandHolder
+from rest_framework.permissions import BasePermission, IsAuthenticated, OperandHolder, SingleOperandHolder
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 
 from materials.models import Course, Lesson, Payments, Subscription
 from materials.paginators import MaterialsPaginator
-from materials.serializers import CourseSerializer, LessonDetailSerializer, LessonSerializer, PaymentsSerializer, \
-    SubscriptionSerializer
+from materials.serializers import (
+    CourseSerializer,
+    LessonDetailSerializer,
+    LessonSerializer,
+    PaymentsSerializer,
+    SubscriptionSerializer,
+)
 from users.permissions import IsModer, IsOwnerOnly
 
 
@@ -24,11 +29,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = MaterialsPaginator
 
-    PermissionClass = Union[
-        type[BasePermission],
-        OperandHolder,
-        SingleOperandHolder
-    ]
+    PermissionClass = Union[type[BasePermission], OperandHolder, SingleOperandHolder]
 
     def get_queryset(self) -> QuerySet[Course]:
         """Фильтрует курсы в зависимости от прав пользователя"""
@@ -148,6 +149,10 @@ class PaymentsViewSet(viewsets.ModelViewSet):
     )
     search_fields = ("course__course_title", "lesson__title", "user__email")
 
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
+        """Автоматически назначает текущего пользователя в качестве покупателя"""
+        serializer.save(user=self.request.user)
+
 
 class SubscriptionAPIView(generics.CreateAPIView):
     """Представления для управления подписками пользователя на курсы"""
@@ -178,27 +183,28 @@ class SubscriptionAPIView(generics.CreateAPIView):
 
         response_serializer = self.get_serializer(subs_item)
 
-        return Response({
-            **response_serializer.data,
-            "message": message,
-        },
+        return Response(
+            {
+                **response_serializer.data,
+                "message": message,
+            },
             status=status.HTTP_200_OK,
         )
 
+
 class SubscriptionCoursesAPIView(generics.ListAPIView):
-        """Представление для получения списка активных подписок пользователя"""
+    """Представление для получения списка активных подписок пользователя"""
 
-        serializer_class = SubscriptionSerializer
-        queryset = Subscription.objects.all()
-        permission_classes = [IsAuthenticated, IsOwnerOnly]
-        pagination_class = MaterialsPaginator
+    serializer_class = SubscriptionSerializer
+    queryset = Subscription.objects.all()
+    permission_classes = [IsAuthenticated, IsOwnerOnly]
+    pagination_class = MaterialsPaginator
 
-        def get_queryset(self) -> QuerySet[Subscription]:
-            """Фильтрует курсы в зависимости от прав пользователя"""
-            user = self.request.user
+    def get_queryset(self) -> QuerySet[Subscription]:
+        """Фильтрует курсы в зависимости от прав пользователя"""
+        user = self.request.user
 
-            if not user.is_authenticated:
-                return Subscription.objects.none()
+        if not user.is_authenticated:
+            return Subscription.objects.none()
 
-            return Subscription.objects.filter(user=user, is_active=True).select_related("course")
-
+        return Subscription.objects.filter(user=user, is_active=True).select_related("course")

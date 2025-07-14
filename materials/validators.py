@@ -3,6 +3,7 @@ from typing import Any
 
 from rest_framework.serializers import ValidationError
 
+
 class LinkValidator:
     """Класс-валидатор для проверки, что ссылка не ведет на YouTube"""
 
