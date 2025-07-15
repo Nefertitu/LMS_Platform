@@ -1,4 +1,4 @@
-from typing import List, Any, cast
+from typing import Any, List, cast
 
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.generics import CreateAPIView
