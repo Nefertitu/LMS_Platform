@@ -1,5 +1,6 @@
 from django.db import models
 
+from config import settings
 from users.models import User
 
 
@@ -7,7 +8,7 @@ class Course(models.Model):
     """Модель Курс"""
 
     course_title = models.CharField(
-        max_length=200, verbose_name="название курса", blank=False, null=False, help_text="Укажите название курса"
+        max_length=200, verbose_name="Название курса", blank=False, null=False, help_text="Укажите название курса"
     )
     preview = models.ImageField(
         verbose_name="Превью",
@@ -23,13 +24,21 @@ class Course(models.Model):
         help_text="Введите описание курса",
     )
     owner = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         blank=False,
         null=False,
         verbose_name="Владелец",
         help_text="Укажите владельца курса",
         related_name="owner_courses",
+    )
+    price = models.DecimalField(
+        verbose_name="Стоимость курса",
+        max_digits=20,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Укажите стоимость курса"
     )
 
     def __str__(self) -> str:
@@ -61,13 +70,21 @@ class Lesson(models.Model):
         Course, on_delete=models.CASCADE, related_name="lessons", verbose_name="Курс", blank=True, null=True
     )
     owner = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
         verbose_name="Владелец",
         help_text="Укажите владельца урока",
         related_name="owner_lessons",
+    )
+    price = models.DecimalField(
+        verbose_name="Стоимость урока",
+        max_digits=20,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Укажите стоимость урока"
     )
 
     def __str__(self) -> str:
@@ -88,7 +105,7 @@ class Payments(models.Model):
 
     PAY_METHOD_CHOICE = [(CASH, "Наличные"), (TRANSFER, "Перевод на счет")]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_payments", help_text="Пользователь")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_payments", help_text="Пользователь")
     payment_date = models.DateTimeField(
         verbose_name="Дата оплаты", blank=True, null=True, help_text="Укажите дату оплаты"
     )
@@ -138,7 +155,7 @@ class Subscription(models.Model):
     """Модель Подписка"""
 
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         blank=True,
         null=True,

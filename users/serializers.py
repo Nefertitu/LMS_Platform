@@ -39,3 +39,4 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "city",
             "avatar",
         )
+
