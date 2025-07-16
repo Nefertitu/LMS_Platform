@@ -10,14 +10,14 @@ class Course(models.Model):
         max_length=200, verbose_name="название курса", blank=False, null=False, help_text="Укажите название курса"
     )
     preview = models.ImageField(
-        verbose_name="превью",
+        verbose_name="Превью",
         upload_to="materials/preview",
         blank=True,
         null=True,
         help_text="Загрузите изображение",
     )
     description = models.TextField(
-        verbose_name="описание",
+        verbose_name="Описание",
         blank=True,
         null=True,
         help_text="Введите описание курса",
@@ -47,15 +47,15 @@ class Lesson(models.Model):
 
     title = models.CharField(max_length=200, verbose_name="название урока", help_text="Укажите название урока")
     preview = models.ImageField(
-        verbose_name="превью(картинка)",
+        verbose_name="Превью(картинка)",
         upload_to="materials/preview",
         blank=True,
         null=True,
         help_text="Загрузите изображение",
     )
-    description = models.TextField(verbose_name="описание", blank=True, null=True, help_text="Введите описание урока")
+    description = models.TextField(verbose_name="Описание", blank=True, null=True, help_text="Введите описание урока")
     link = models.URLField(
-        max_length=500, verbose_name="ссылка на видео", blank=True, null=True, help_text="Добавьте ссылку на видео"
+        max_length=500, verbose_name="Ссылка на видео", blank=True, null=True, help_text="Добавьте ссылку на видео"
     )
     course = models.ForeignKey(
         Course, on_delete=models.CASCADE, related_name="lessons", verbose_name="Курс", blank=True, null=True
@@ -90,7 +90,7 @@ class Payments(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_payments", help_text="Пользователь")
     payment_date = models.DateTimeField(
-        verbose_name="дата оплаты", blank=True, null=True, help_text="Укажите дату оплаты"
+        verbose_name="Дата оплаты", blank=True, null=True, help_text="Укажите дату оплаты"
     )
     lesson = models.ForeignKey(
         Lesson,
@@ -109,7 +109,7 @@ class Payments(models.Model):
         null=True,
     )
     amount = models.DecimalField(
-        verbose_name="сумма оплаты",
+        verbose_name="Сумма оплаты",
         max_digits=20,
         decimal_places=2,
         blank=True,
@@ -119,7 +119,7 @@ class Payments(models.Model):
     payment_method = models.CharField(
         max_length=50,
         choices=PAY_METHOD_CHOICE,
-        verbose_name="способ оплаты",
+        verbose_name="Способ оплаты",
         help_text="Выберите способ оплаты",
         default=TRANSFER,
     )
