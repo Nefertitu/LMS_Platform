@@ -36,9 +36,9 @@ class Course(models.Model):
         verbose_name="Стоимость курса",
         max_digits=20,
         decimal_places=2,
-        blank=True,
-        null=True,
-        help_text="Укажите стоимость курса"
+        blank=False,
+        null=False,
+        help_text="Укажите стоимость курса",
     )
 
     def __str__(self) -> str:
@@ -82,9 +82,9 @@ class Lesson(models.Model):
         verbose_name="Стоимость урока",
         max_digits=20,
         decimal_places=2,
-        blank=True,
-        null=True,
-        help_text="Укажите стоимость урока"
+        blank=False,
+        null=False,
+        help_text="Укажите стоимость урока",
     )
 
     def __str__(self) -> str:
@@ -105,7 +105,9 @@ class Payments(models.Model):
 
     PAY_METHOD_CHOICE = [(CASH, "Наличные"), (TRANSFER, "Перевод на счет")]
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_payments", help_text="Пользователь")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_payments", help_text="Пользователь"
+    )
     payment_date = models.DateTimeField(
         verbose_name="Дата оплаты", blank=True, null=True, help_text="Укажите дату оплаты"
     )

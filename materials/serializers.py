@@ -6,6 +6,7 @@ from rest_framework.serializers import ModelSerializer
 
 from materials.models import Course, Lesson, Payments, Subscription
 from materials.validators import LinkValidator
+from users.models import Payment
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -93,7 +94,7 @@ class PaymentsSerializer(ModelSerializer):
 
     def get_payment_date(self, instance: Payments) -> Optional[str]:
         """Форматирует дату платежа в строку"""
-        return instance.payment_date.strftime("%d.%M.%Y %H:%m") if instance.payment_date else None
+        return instance.payment_date.strftime("%d.%m.%Y %H:%M") if instance.payment_date else None
 
     def get_lesson(self, instance: Payments) -> Optional[str]:
         """Возвращает название урока"""
@@ -151,7 +152,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_created_at(self, instance: Subscription) -> Optional[str]:
         """Форматирует дату создания подписки в строку"""
-        return instance.created_at.strftime("%d.%M.%Y %H:%m") if instance.created_at else None
+        return instance.created_at.strftime("%d.%m.%Y %H:%M") if instance.created_at else None
 
     class Meta:
         model = Subscription

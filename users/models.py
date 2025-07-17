@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from rest_framework.exceptions import ValidationError
 
 from config import settings
 
@@ -40,8 +41,9 @@ class Payment(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="payments",
-        blank=True, null=True,
-        help_text="Пользователь"
+        blank=True,
+        null=True,
+        help_text="Пользователь",
     )
 
     lesson = models.ForeignKey(
@@ -60,14 +62,6 @@ class Payment(models.Model):
         blank=True,
         null=True,
     )
-    amount = models.DecimalField(
-        verbose_name="Сумма платежа",
-        max_digits=20,
-        decimal_places=2,
-        blank=True,
-        null=True,
-        help_text="Укажите сумму платежа",
-    )
 
     session_id = models.CharField(
         max_length=255,
@@ -81,16 +75,19 @@ class Payment(models.Model):
         blank=True,
         null=True,
         verbose_name="Ссылка на оплату",
-        help_text="Укажите ссылку на оплату",
+        help_text="Ссылка на оплату",
     )
 
     def __str__(self) -> str:
         """Строковое отображение платежа"""
-        return self.amount
+        if self.course and hasattr(self.course, "price"):
+            return str(self.course.price)
+        elif self.lesson and hasattr(self.lesson, "price"):
+            return str(self.lesson.price)
+        else:
+            raise ValidationError("У продукта не указана цена")
 
     class Meta:
         verbose_name = "Платеж"
         verbose_name_plural = "Платежи"
         ordering = ["-id"]
-
-
