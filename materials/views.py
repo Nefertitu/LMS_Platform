@@ -20,6 +20,7 @@ from materials.serializers import (
     SubscriptionSerializer,
 )
 from users.permissions import IsModer, IsOwnerOnly
+from users.services import create_retrieves_a_checkout_session
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -149,9 +150,16 @@ class PaymentsViewSet(viewsets.ModelViewSet):
     )
     search_fields = ("course__course_title", "lesson__title", "user__email")
 
-    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
-        """Автоматически назначает текущего пользователя в качестве покупателя"""
-        serializer.save(user=self.request.user)
+    # def perform_create(self, serializer: BaseSerializer[Any]) -> None:
+    #     """Автоматически назначает текущего пользователя в качестве покупателя"""
+    #
+    #     payment = serializer.save(user=self.request.user)
+    #     print(payment)
+    #     session_id = payment.session_id
+    #     session_status = create_retrieves_a_checkout_session(session_id)
+    #     payment.amount = session_status.amount_total
+    #     payment.status = session_status.payment_status
+    #     payment.save()
 
 
 class SubscriptionAPIView(generics.CreateAPIView):

@@ -1,5 +1,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from rest_framework.exceptions import ValidationError
+
+from config import settings
 
 
 class User(AbstractUser):
@@ -29,3 +32,62 @@ class User(AbstractUser):
     class Meta:
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
+
+
+class Payment(models.Model):
+    """Модель Платеж"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="payments",
+        blank=True,
+        null=True,
+        help_text="Пользователь",
+    )
+
+    lesson = models.ForeignKey(
+        "materials.Lesson",
+        on_delete=models.CASCADE,
+        related_name="payments",
+        help_text="Оплаченный урок",
+        blank=True,
+        null=True,
+    )
+    course = models.ForeignKey(
+        "materials.Course",
+        on_delete=models.CASCADE,
+        related_name="payments",
+        help_text="Оплаченный курс",
+        blank=True,
+        null=True,
+    )
+
+    session_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="ID сессии",
+        help_text="Укажите ID сессии",
+    )
+    link = models.URLField(
+        max_length=400,
+        blank=True,
+        null=True,
+        verbose_name="Ссылка на оплату",
+        help_text="Ссылка на оплату",
+    )
+
+    def __str__(self) -> str:
+        """Строковое отображение платежа"""
+        if self.course and hasattr(self.course, "price"):
+            return str(self.course.price)
+        elif self.lesson and hasattr(self.lesson, "price"):
+            return str(self.lesson.price)
+        else:
+            raise ValidationError("У продукта не указана цена")
+
+    class Meta:
+        verbose_name = "Платеж"
+        verbose_name_plural = "Платежи"
+        ordering = ["-id"]
