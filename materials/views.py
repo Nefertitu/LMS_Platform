@@ -19,6 +19,7 @@ from materials.serializers import (
     SubscriptionSerializer,
 )
 from users.permissions import IsModer, IsOwnerOnly
+
 from .tasks import notify_subscriber
 
 
@@ -61,7 +62,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         """Создает новый объект (Course) и автоматически назначает владельца (текущего пользователя)"""
         serializer.save(owner=self.request.user)
 
-    def update(self, request, *args, **kwargs):
+    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Обновление курса"""
 
         instance = self.get_object()
@@ -73,7 +74,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
-        now = timezone.now()
+        now = timezone.localtime()
         four_hours_ago = now - timedelta(seconds=60)  # 14400 сек. = 4 часа
 
         if previous_update_time < four_hours_ago:
@@ -83,7 +84,7 @@ class CourseViewSet(viewsets.ModelViewSet):
                 notify_subscriber.delay(subs.pk)
                 print(f"Задача отправки уведомления для подписки {subs.pk} запущена")
 
-        if getattr(instance, '_prefetched_objects_cache', None):
+        if getattr(instance, "_prefetched_objects_cache", None):
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)

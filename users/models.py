@@ -43,14 +43,14 @@ class Payment(models.Model):
 
     PAY_METHOD_CHOICE = [(CASH, "Наличные"), (TRANSFER, "Перевод на счет")]
 
-    STATUS_PENDING = 'pending'
-    STATUS_PAID = 'paid'
-    STATUS_CANCELED = 'canceled'
+    STATUS_PENDING = "pending"
+    STATUS_PAID = "paid"
+    STATUS_CANCELED = "canceled"
 
     STATUS_CHOICES = [
-        (STATUS_PENDING, 'Ожидает оплаты'),
-        (STATUS_PAID, 'Оплачено'),
-        (STATUS_CANCELED, 'Отменено'),
+        (STATUS_PENDING, "Ожидает оплаты"),
+        (STATUS_PAID, "Оплачено"),
+        (STATUS_CANCELED, "Отменено"),
     ]
 
     user = models.ForeignKey(
@@ -94,20 +94,17 @@ class Payment(models.Model):
         help_text="Ссылка на оплату",
     )
     payment_method = models.CharField(
-            max_length=50,
-            choices=PAY_METHOD_CHOICE,
-            verbose_name="Способ оплаты",
-            help_text="Выберите способ оплаты",
-            default=TRANSFER,
-        )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING
+        max_length=50,
+        choices=PAY_METHOD_CHOICE,
+        verbose_name="Способ оплаты",
+        help_text="Выберите способ оплаты",
+        default=TRANSFER,
     )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     payment_date = models.DateTimeField(
-            verbose_name="Дата оплаты", default=timezone.now,
-        )
+        verbose_name="Дата оплаты",
+        default=timezone.now,
+    )
 
     def __str__(self) -> str:
         """Строковое отображение платежа"""
@@ -116,7 +113,7 @@ class Payment(models.Model):
         elif self.lesson and hasattr(self.lesson, "price"):
             return str(self.lesson.price)
         else:
-            raise ValidationError("У продукта не указана цена")
+            return "У продукта не указана цена"
 
     class Meta:
         verbose_name = "Платеж"

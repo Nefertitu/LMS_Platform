@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 
+from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg.utils import swagger_serializer_method
 from pydantic import ValidationError
 from rest_framework import serializers
@@ -94,11 +95,20 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
 
     def get_payment_status(self, obj: Payment) -> Optional[str]:
         """Возвращает статус платежа"""
-        return getattr(obj, "stripe_status", None) if obj.payment_method == "transfer" else getattr(obj, "status", None)
+        return (
+            getattr(obj, "stripe_status", None) if obj.payment_method == "transfer" else getattr(obj, "status", None)
+        )
 
     def get_payment_amount(self, obj: Payment) -> Optional[Decimal]:
         """Возвращает сумму платежа в рублях с преобразованием из копеек"""
-        price = obj.lesson.price if obj.lesson else obj.course.price
+
+        if obj.lesson:
+            price = obj.lesson.price
+        elif obj.course:
+            price = obj.course.price
+        else:
+            raise ValidationError("У продукта не установлена цена")
+
         amount = getattr(obj, "stripe_amount", None) if obj.payment_method == "transfer" else price * 100
         return Decimal(amount) / 100 if amount is not None else None
 
@@ -108,13 +118,42 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
 
     def get_customer_email(self, obj: Payment) -> Optional[str]:
         """Возвращает 'email' покупателя"""
-        return getattr(obj, "stripe_email", None) if obj.payment_method == "transfer" else obj.user.email
+
+        if obj is None:
+            return None
+        try:
+            if obj.payment_method == Payment.CASH:
+                return getattr(obj.user, "email", None) if hasattr(obj, "user") else None
+            elif obj.payment_method == Payment.TRANSFER:
+                return getattr(obj, "stripe_email", None)
+        except ObjectDoesNotExist:
+            return None
+
+        return None
 
     def get_payment_method(self, obj: Payment) -> Optional[str]:
         """Возвращает способ оплаты"""
-        return getattr(obj, "payment_method", None) if obj.payment_method == "cash" else "transfer via 'Stripe'"
+
+        if obj is None:
+            return None
+
+        payment_method = getattr(obj, "payment_method", None)
+
+        if payment_method == Payment.CASH:
+            return None
+        elif payment_method == Payment.TRANSFER:
+            return "Банковский перевод через Stripe"
+
+        return None
 
     class Meta:
         model = Payment
-        fields = ("id", "title", "payment_status", "payment_amount", "payment_currency", "customer_email", "payment_method",)
-
+        fields = (
+            "id",
+            "title",
+            "payment_status",
+            "payment_amount",
+            "payment_currency",
+            "customer_email",
+            "payment_method",
+        )

@@ -10,13 +10,15 @@ from users.models import User
 
 
 @shared_task
-def check_last_login_and_block():
+def check_last_login_and_block() -> str:
     """Блокирует пользователей, которые не заходили более месяца"""
 
-    now = timezone.now()
-    time_difference = now - timedelta(days=30)   #(minutes=5)
+    now = timezone.localtime()
+    time_difference = now - timedelta(days=30)  # (minutes=5)
 
-    users_to_block = User.objects.filter(Q(last_login__lt=time_difference) | Q(last_login__isnull=True), is_active=True, is_superuser=False).values_list("email", flat=True)
+    users_to_block = User.objects.filter(
+        Q(last_login__lt=time_difference) | Q(last_login__isnull=True), is_active=True, is_superuser=False
+    ).values_list("email", flat=True)
 
     emails_list = list(users_to_block)
     count_users = len(emails_list)
@@ -28,13 +30,13 @@ def check_last_login_and_block():
     for email in emails_list:
         try:
             send_mail(
-                f"Блокировка пользователя",
+                "Блокировка пользователя",
                 f"Уважаемый пользователь (email: {email})!\n"
                 f"Ваша учетная запись заблокирована, так как была неактивна в течение 1-го месяца",
                 os.getenv("EMAIL_HOST_USER"),
                 [email],
-                fail_silently=False
-                )
+                fail_silently=False,
+            )
 
             print(f"Отправлено письмо пользователю: {email}")
 

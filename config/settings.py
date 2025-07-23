@@ -99,7 +99,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 
@@ -139,7 +139,7 @@ if CACHE_ENABLED:
 CELERY_BEAT_SCHEDULE = {
     "block_inactive_users": {
         "task": "users.tasks.check_last_login_and_block",
-        'schedule': timedelta(days=1),   #timedelta(minutes=5)
+        "schedule": timedelta(days=1),  # timedelta(minutes=5)
     },
 }
 

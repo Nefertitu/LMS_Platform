@@ -5,8 +5,13 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from users.apps import UsersConfig
-from users.views import PaymentCreateAPIView, PaymentRetrieveAPIView, UserCreateApiView, UserProfileViewSet, \
-    ConfirmCashPaymentAPIView
+from users.views import (
+    ConfirmCashPaymentAPIView,
+    PaymentCreateAPIView,
+    PaymentRetrieveAPIView,
+    UserCreateApiView,
+    UserProfileViewSet,
+)
 
 app_name = UsersConfig.name
 

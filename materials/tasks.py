@@ -8,18 +8,24 @@ from materials.models import Subscription
 
 
 @shared_task
-def notify_subscriber(subscription_pk):
+def notify_subscriber(subscription_pk: int) -> None:
     """Отправляет сообщения об обновлении курсов пользователям, подписанным на них"""
 
-    subscription = Subscription.objects.all().get(pk=subscription_pk)
-
     try:
+        subscription = Subscription.objects.all().get(pk=subscription_pk)
+
+        if not subscription.user or not subscription.user.email:
+            raise ValueError("У подписки отсутствует пользователь или email")
+
+        if not subscription.course:
+            raise ValueError("У подписки отсутствует курс")
+
         send_mail(
             f"Обновление материалов курса '{subscription.course.course_title}'",
             f"Вы пописаны на обновления курса {subscription.course.course_title}",
             os.getenv("EMAIL_HOST_USER"),
             [subscription.user.email],
-            fail_silently=False
+            fail_silently=False,
         )
         for email in subscription.user.email:
             print(f"Найдены изменения курса, отправлено сообщение пользователю {email}")
