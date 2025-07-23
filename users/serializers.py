@@ -121,15 +121,10 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
 
         if obj is None:
             return None
-        try:
-            if obj.payment_method == Payment.CASH:
-                return getattr(obj.user, "email", None) if hasattr(obj, "user") else None
-            elif obj.payment_method == Payment.TRANSFER:
-                return getattr(obj, "stripe_email", None)
-        except ObjectDoesNotExist:
-            return None
 
-        return None
+        if obj.payment_method == Payment.CASH:
+            return obj.user.email if obj.user else None
+        return obj.customer_email
 
     def get_payment_method(self, obj: Payment) -> Optional[str]:
         """Возвращает способ оплаты"""

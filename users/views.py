@@ -1,7 +1,7 @@
 import os
+from decimal import Decimal, InvalidOperation
 from typing import Any, List, cast
 
-import rest_framework
 from django.core.mail import send_mail
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, serializers, viewsets
@@ -10,7 +10,6 @@ from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIVie
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
-from stripe.forwarding import Request
 
 from users.models import Payment, User
 from users.paginators import UsersPaginator
@@ -113,33 +112,45 @@ class PaymentCreateAPIView(CreateAPIView):
 
         payment = serializer.save(user=self.request.user)
         # payment = cast(Payment, serializer.instance)
-        if not payment.course and not payment.lesson:
-            raise ValidationError(
-                {"detail": "Платеж должен быть связан с курсом или уроком"}
-            )
-        product_name = payment.course if payment.course else payment.lesson
 
-        if product_name is None:
-            raise ValidationError("Платеж должен быть связан с курсом или с уроком")
+        product_name = payment.course or payment.lesson
+        if not product_name:
+            raise ValidationError("Платеж должен быть привязан к курсу или уроку")
+
         if payment.course and hasattr(payment.course, "price"):
             product_price = payment.course.price
         elif payment.lesson and hasattr(payment.lesson, "price"):
             product_price = payment.lesson.price
         else:
-            raise ValidationError("Продукт не имеет цены")
+            raise ValidationError("У продукта отсутствует цена")
 
         if payment.payment_method == Payment.CASH:
             payment.status = Payment.STATUS_PENDING
             payment.save()
 
-        else:
+        try:
             stripe_product = create_stripe_product(product_name)
             stripe_price = create_stripe_price(stripe_product, product_price)
-            session_id, link = create_stripe_session(stripe_price)
+
+            session_id, payment_link = create_stripe_session(stripe_price)
+
+            stripe_data = create_retrieves_a_checkout_session(session_id)
+
             payment.session_id = session_id
-            payment.link = link
-            payment.status = Payment.STATUS_PENDING
+            payment.link = payment_link
+            # payment.status = Payment.STATUS_PENDING
+            payment.stripe_status = stripe_data["status"]
+            payment.status = stripe_data["status"]
+            payment.stripe_amount = stripe_data.get("amount")
+            payment.stripe_currency = stripe_data.get("currency", "rub")
+            payment.customer_email = stripe_data.get("email")
+            payment.stripe_payment_intent_id = stripe_data.get("payment_intent_id")
+
             payment.save()
+
+        except Exception as e:
+            print(f"Payment creation error: {e}")
+            raise ValidationError("Ошибка при создании платежа в Stripe")
 
 
 class ConfirmCashPaymentAPIView(UpdateAPIView):
@@ -155,7 +166,7 @@ class ConfirmCashPaymentAPIView(UpdateAPIView):
     lookup_field = "pk"
 
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
-        """ Подтверждает платеж наличными и отправляет уведомление пользователю по email"""
+        """Подтверждает платеж наличными и отправляет уведомление пользователю по email"""
 
         payment = cast(Payment, serializer.instance)
 
@@ -205,19 +216,14 @@ class PaymentRetrieveAPIView(RetrieveAPIView):
         response_data = {}
 
         if payment.session_id and payment.payment_method == Payment.TRANSFER:
-            session_status = create_retrieves_a_checkout_session(payment.session_id)
-            payment.stripe_status = session_status.get("status")
-            payment.stripe_amount = session_status.get("amount")
-            payment.stripe_currency = session_status.get("currency")
-            payment.stripe_email = session_status.get("email")
-            response_data.update(
-                {
-                    "stripe_status": payment.stripe_status,
-                    "stripe_amount": payment.stripe_amount,
-                    "stripe_currency": payment.stripe_currency,
-                    "payment_method": payment.payment_method,
-                }
-            )
+            stripe_data = create_retrieves_a_checkout_session(payment.session_id)
+            payment.stripe_status = stripe_data.get("status")
+            payment.stripe_amount = stripe_data.get("amount")
+            payment.stripe_currency = stripe_data.get("currency")
+            payment.customer_email = stripe_data.get("email")
+            payment.stripe_payment_intent_id = stripe_data.get("payment_intent_id")
+
+            payment.save()
 
         elif payment.payment_method == Payment.CASH:
             response_data.update(

@@ -1,3 +1,6 @@
+from typing import Optional
+
+import stripe
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -105,6 +108,15 @@ class Payment(models.Model):
         verbose_name="Дата оплаты",
         default=timezone.now,
     )
+    stripe_payment_intent_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+    stripe_status = models.CharField(max_length=50, blank=True, null=True, verbose_name="Статус Stripe")
+    stripe_amount = models.IntegerField(blank=True, null=True, verbose_name="Сумма в копейках")
+    stripe_currency = models.CharField(max_length=3, default="rub")
+    customer_email = models.EmailField(blank=True, null=True, verbose_name="Email пользователя из 'Stripe'")
 
     def __str__(self) -> str:
         """Строковое отображение платежа"""
@@ -114,6 +126,41 @@ class Payment(models.Model):
             return str(self.lesson.price)
         else:
             return "У продукта не указана цена"
+
+    @property
+    def payment_status(self) -> str:
+        """Унифицированный статус платежа"""
+        if self.payment_method == self.CASH:
+            return self.status
+        return self.stripe_status or "unknown"
+
+    def refresh_from_stripe(self) -> bool:
+        """Обновляет данные из Stripe"""
+        if not self.session_id:
+            return False
+
+        try:
+            session = stripe.checkout.Session.retrieve(self.session_id)
+            self.stripe_status = str(session.payment_status)
+
+            if isinstance(session.amount_total, int):
+                self.stripe_amount = session.amount_total
+            else:
+                self.stripe_amount = int(session.amount_total) if session.amount_total is not None else None
+
+            self.stripe_currency = str(session.currency)
+
+            email = None
+            if hasattr(session, 'customer_details') and session.customer_details:
+                email = getattr(session.customer_details, 'email', None)
+            self.customer_email = email
+
+            self.save()
+            return True
+
+        except stripe.StripeError as e:
+            print(f"Stripe error: {e}")
+            return False
 
     class Meta:
         verbose_name = "Платеж"

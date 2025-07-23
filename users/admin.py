@@ -29,6 +29,9 @@ class UserAdmin(admin.ModelAdmin):
             "user",
             "lesson",
             "course",
+            "stripe_status",
+            "stripe_amount",
+            "customer_email",
         )
         list_filter = ("id",)
         search_fields = ("lesson", "course", "user")
