@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from config import settings
@@ -36,6 +37,21 @@ class User(AbstractUser):
 
 class Payment(models.Model):
     """Модель Платеж"""
+
+    CASH = "cash"
+    TRANSFER = "transfer"
+
+    PAY_METHOD_CHOICE = [(CASH, "Наличные"), (TRANSFER, "Перевод на счет")]
+
+    STATUS_PENDING = 'pending'
+    STATUS_PAID = 'paid'
+    STATUS_CANCELED = 'canceled'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Ожидает оплаты'),
+        (STATUS_PAID, 'Оплачено'),
+        (STATUS_CANCELED, 'Отменено'),
+    ]
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -77,6 +93,21 @@ class Payment(models.Model):
         verbose_name="Ссылка на оплату",
         help_text="Ссылка на оплату",
     )
+    payment_method = models.CharField(
+            max_length=50,
+            choices=PAY_METHOD_CHOICE,
+            verbose_name="Способ оплаты",
+            help_text="Выберите способ оплаты",
+            default=TRANSFER,
+        )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING
+    )
+    payment_date = models.DateTimeField(
+            verbose_name="Дата оплаты", default=timezone.now,
+        )
 
     def __str__(self) -> str:
         """Строковое отображение платежа"""

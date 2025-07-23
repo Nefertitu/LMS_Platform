@@ -1,26 +1,25 @@
-from pyexpat.errors import messages
+from datetime import timedelta
 from typing import Any, Sequence, Union
 
 from django.db.models import QuerySet
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, generics, status, viewsets
+from django.utils import timezone
+from rest_framework import generics, status, viewsets
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import BasePermission, IsAuthenticated, OperandHolder, SingleOperandHolder
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 
-from materials.models import Course, Lesson, Payments, Subscription
+from materials.models import Course, Lesson, Subscription
 from materials.paginators import MaterialsPaginator
 from materials.serializers import (
     CourseSerializer,
     LessonDetailSerializer,
     LessonSerializer,
-    PaymentsSerializer,
     SubscriptionSerializer,
 )
 from users.permissions import IsModer, IsOwnerOnly
-from users.services import create_retrieves_a_checkout_session
+from .tasks import notify_subscriber
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -61,6 +60,33 @@ class CourseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Создает новый объект (Course) и автоматически назначает владельца (текущего пользователя)"""
         serializer.save(owner=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        """Обновление курса"""
+
+        instance = self.get_object()
+        previous_update_time = instance.updated_at
+
+        # subscription = Subscription.objects.filter(course=instance, is_active=True)
+        partial = kwargs.pop("partial", False)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        now = timezone.now()
+        four_hours_ago = now - timedelta(seconds=60)  # 14400 сек. = 4 часа
+
+        if previous_update_time < four_hours_ago:
+            subscription = Subscription.objects.filter(course=instance, is_active=True)
+
+            for subs in subscription:
+                notify_subscriber.delay(subs.pk)
+                print(f"Задача отправки уведомления для подписки {subs.pk} запущена")
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
 
 
 class LessonCreateAPIView(generics.CreateAPIView):
@@ -128,38 +154,6 @@ class LessonDestroyAPIView(generics.DestroyAPIView):
         IsAuthenticated,
         IsOwnerOnly | ~IsModer,
     )
-
-
-class PaymentsViewSet(viewsets.ModelViewSet):
-    """ViewSet для работы с платежами"""
-
-    serializer_class = PaymentsSerializer
-    queryset = Payments.objects.all()
-    permission_classes = (IsAuthenticated, IsOwnerOnly)
-    pagination_class = MaterialsPaginator
-
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    filterset_fields = (
-        "course",
-        "lesson",
-        "payment_method",
-    )
-    ordering_fields = (
-        "payment_date",
-        "amount",
-    )
-    search_fields = ("course__course_title", "lesson__title", "user__email")
-
-    # def perform_create(self, serializer: BaseSerializer[Any]) -> None:
-    #     """Автоматически назначает текущего пользователя в качестве покупателя"""
-    #
-    #     payment = serializer.save(user=self.request.user)
-    #     print(payment)
-    #     session_id = payment.session_id
-    #     session_status = create_retrieves_a_checkout_session(session_id)
-    #     payment.amount = session_status.amount_total
-    #     payment.status = session_status.payment_status
-    #     payment.save()
 
 
 class SubscriptionAPIView(generics.CreateAPIView):

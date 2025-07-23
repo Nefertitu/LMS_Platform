@@ -1,7 +1,10 @@
+import json
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, Tuple, Union
 
 import stripe
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 from config.settings import STRIPE_API_KEY
 from materials.models import Course, Lesson

@@ -1,15 +1,19 @@
+import os
 from typing import Any, List, cast
 
-from rest_framework import permissions, serializers, viewsets
+from django.core.mail import send_mail
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, permissions, serializers, viewsets
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, RetrieveAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 from stripe.forwarding import Request
 
 from users.models import Payment, User
-from users.permissions import IsOwnerOnly
+from users.paginators import UsersPaginator
+from users.permissions import IsOwnerOnly, IsModer
 from users.serializers import PaymentDetailSerializer, PaymentSerializer, PublicUserSerializer, UserProfileSerializer
 from users.services import (
     create_retrieves_a_checkout_session,
@@ -87,12 +91,28 @@ class PaymentCreateAPIView(CreateAPIView):
 
     serializer_class = PaymentSerializer
     queryset = Payment.objects.all()
+    permission_classes = (IsAuthenticated,)
+
+    pagination_class = UsersPaginator
+
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = (
+        "course",
+        "lesson",
+        "payment_method",
+    )
+    ordering_fields = (
+        "payment_date",
+        "amount",
+    )
+    search_fields = ("course__course_title", "lesson__title", "user__email")
 
     def perform_create(self, serializer: BaseSerializer[Payment]) -> None:
         """Создает платеж и связанные сущности в Stripe."""
 
         payment = serializer.save(user=self.request.user)
         product_name = payment.course if payment.course else payment.lesson
+
         if product_name is None:
             raise ValidationError("Платеж должен быть связан с курсом или с уроком")
         if payment.course and hasattr(payment.course, "price"):
@@ -101,12 +121,56 @@ class PaymentCreateAPIView(CreateAPIView):
             product_price = payment.lesson.price
         else:
             raise ValidationError("Продукт не имеет цены")
-        stripe_product = create_stripe_product(product_name)
-        stripe_price = create_stripe_price(stripe_product, product_price)
-        session_id, link = create_stripe_session(stripe_price)
-        payment.session_id = session_id
-        payment.link = link
-        payment.save()
+
+        if payment.payment_method == "cash":
+            payment.status = "pending"
+            payment.amount = product_price
+            payment.save()
+
+        else:
+            stripe_product = create_stripe_product(product_name)
+            stripe_price = create_stripe_price(stripe_product, product_price)
+            session_id, link = create_stripe_session(stripe_price)
+            payment.session_id = session_id
+            payment.link = link
+            payment.status = "pending"
+            payment.save()
+
+
+class ConfirmCashPaymentAPIView(UpdateAPIView):
+    """API эндпоинт для подтверждения платежа наличными"""
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
+    permission_classes = (
+        IsAuthenticated,
+        IsAdminUser | IsOwnerOnly,
+        ~IsModer,
+    )
+    lookup_field = "pk"
+
+    def perform_update(self, serializer):
+        payment = serializer.instance
+
+        if payment.payment_method != "cash":
+            raise ValidationError({"detail": "Можно подтверждать только наличные платежи"})
+
+        if payment.status != "pending":
+            raise ValidationError({"detail": "Платеж уже был обработан"})
+
+        product_name = payment.lesson.title if payment.lesson else payment.course.course_title
+        product_amount = payment.lesson.price if payment.lesson else payment.course.price
+        # link = [payment.lesson.link if payment.lesson else payment.course.link]
+        payment.status = "paid"
+        serializer.save(status="paid")
+
+        send_mail(
+            f"Подтвержден платеж на доступ к {product_name}",
+            f"Платеж #{payment.id} на сумму {product_amount} подтвержден.",
+            # f'Ссылка на урок: {link}',
+            os.getenv("EMAIL_HOST_USER"),
+            [payment.user.email],
+            fail_silently=False
+            )
 
 
 class PaymentRetrieveAPIView(RetrieveAPIView):
@@ -117,14 +181,28 @@ class PaymentRetrieveAPIView(RetrieveAPIView):
 
     def retrieve(self, *args: Any, **kwargs: Any) -> Response:
         """Возвращает детальную информацию о платеже со статусом из Stripe"""
+        payment = self.get_object()
+        response_data = {}
 
-        obj = self.get_object()
-        if obj.session_id:
-            session_status = create_retrieves_a_checkout_session(obj.session_id)
-            obj.stripe_status = session_status.get("status")
-            obj.stripe_amount = session_status.get("amount")
-            obj.stripe_currency = session_status.get("currency")
-            obj.stripe_email = session_status.get("email")
+        if payment.session_id:
+            session_status = create_retrieves_a_checkout_session(payment.session_id)
+            payment.stripe_status = session_status.get("status")
+            payment.stripe_amount = session_status.get("amount")
+            payment.stripe_currency = session_status.get("currency")
+            payment.stripe_email = session_status.get("email")
+            response_data.update({
+                "stripe_status": payment.stripe_status,
+                "stripe_amount": payment.stripe_amount,
+                "stripe_currency": payment.stripe_currency,
+                "payment_method": payment.payment_method,
+            })
 
-        serializer = self.get_serializer(obj)
+        elif payment.payment_method == "cash":
+            response_data.update({
+                "payment_method": "cash",
+                "payment_status": payment.status,
+            })
+
+
+        serializer = self.get_serializer(payment)
         return Response(serializer.data)

@@ -1,12 +1,11 @@
 from decimal import Decimal
 from typing import Optional
 
+from drf_yasg.utils import swagger_serializer_method
 from pydantic import ValidationError
 from rest_framework import serializers
 from rest_framework.fields import SerializerMethodField
 
-from materials.models import Payments
-from materials.serializers import PaymentsSerializer
 from users.models import Payment, User
 
 
@@ -17,8 +16,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_payments(self, obj: User) -> dict:
         """Возвращает список платежей пользователей"""
-        payments = Payments.objects.filter(user=obj).select_related("course", "lesson")
-        return PaymentsSerializer(payments, many=True).data
+        payments = Payment.objects.filter(user=obj).select_related("course", "lesson")
+        return PaymentSerializer(payments, many=True).data
 
     class Meta:
         model = User
@@ -82,6 +81,7 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
     payment_amount = SerializerMethodField()
     payment_currency = SerializerMethodField()
     customer_email = SerializerMethodField()
+    payment_method = SerializerMethodField()
 
     def get_title(self, obj: Payment) -> Optional[str]:
         """Возвращает название урока или курса"""
@@ -93,22 +93,28 @@ class PaymentDetailSerializer(serializers.ModelSerializer):
             raise ValidationError("У продукта нет названия")
 
     def get_payment_status(self, obj: Payment) -> Optional[str]:
-        """Возвращает статус платежа из Stripe"""
-        return getattr(obj, "stripe_status", None)
+        """Возвращает статус платежа"""
+        return getattr(obj, "stripe_status", None) if obj.payment_method == "transfer" else getattr(obj, "status", None)
 
     def get_payment_amount(self, obj: Payment) -> Optional[Decimal]:
         """Возвращает сумму платежа в рублях с преобразованием из копеек"""
-        amount = getattr(obj, "stripe_amount", None)
+        price = obj.lesson.price if obj.lesson else obj.course.price
+        amount = getattr(obj, "stripe_amount", None) if obj.payment_method == "transfer" else price * 100
         return Decimal(amount) / 100 if amount is not None else None
 
     def get_payment_currency(self, obj: Payment) -> Optional[str]:
-        """Возвращает валюту платежа из Stripe"""
-        return getattr(obj, "stripe_currency", None)
+        """Возвращает валюту платежа"""
+        return getattr(obj, "stripe_currency", None) if obj.payment_method == "transfer" else "rub"
 
     def get_customer_email(self, obj: Payment) -> Optional[str]:
-        """Возвращает 'email' покупателя из Stripe"""
-        return getattr(obj, "stripe_email", None)
+        """Возвращает 'email' покупателя"""
+        return getattr(obj, "stripe_email", None) if obj.payment_method == "transfer" else obj.user.email
+
+    def get_payment_method(self, obj: Payment) -> Optional[str]:
+        """Возвращает способ оплаты"""
+        return getattr(obj, "payment_method", None) if obj.payment_method == "cash" else "transfer via 'Stripe'"
 
     class Meta:
         model = Payment
-        fields = ("id", "title", "payment_status", "payment_amount", "payment_currency", "customer_email")
+        fields = ("id", "title", "payment_status", "payment_amount", "payment_currency", "customer_email", "payment_method",)
+
