@@ -5,7 +5,13 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from users.apps import UsersConfig
-from users.views import PaymentCreateAPIView, PaymentRetrieveAPIView, UserCreateApiView, UserProfileViewSet
+from users.views import (
+    ConfirmCashPaymentAPIView,
+    PaymentCreateAPIView,
+    PaymentRetrieveAPIView,
+    UserCreateApiView,
+    UserProfileViewSet,
+)
 
 app_name = UsersConfig.name
 
@@ -21,4 +27,5 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(next_page="users:login"), name="logout"),
     path("payment/", PaymentCreateAPIView.as_view(), name="payment"),
     path("payment/<int:pk>/", PaymentRetrieveAPIView.as_view(), name="payment-detail"),
+    path("payment/confirm/<int:pk>/", ConfirmCashPaymentAPIView.as_view(), name="payment-confirm-cash"),
 ] + router.urls

@@ -1,7 +1,10 @@
+import json
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, Tuple, Union
 
 import stripe
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 from config.settings import STRIPE_API_KEY
 from materials.models import Course, Lesson
@@ -37,6 +40,7 @@ def create_stripe_session(price: stripe.Price) -> Tuple[str, str | None]:
         line_items=[{"price": price.id, "quantity": 1}],
         mode="payment",
     )
+
     return session.id, session.url
 
 
@@ -45,11 +49,18 @@ def create_retrieves_a_checkout_session(session_id: str) -> Dict[str, Any]:
 
     session_result = stripe.checkout.Session.retrieve(session_id)
     # print(f"Результат платежа: {session_result}")
+
+    customer_email = None
+    if hasattr(session_result, 'customer_details') and session_result.customer_details:
+        customer_email = getattr(session_result.customer_details, 'email', None)
+
     session_data = {
         "amount": session_result.amount_total,
         "status": session_result.payment_status,
         "currency": session_result.currency,
-        "email": getattr(session_result.customer_details, "email", None),
+        "email": customer_email,
+        "payment_intent_id": session_result.payment_intent,
     }
     # print(f"Статус: {session_data['status']}")
+
     return session_data

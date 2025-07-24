@@ -1,5 +1,9 @@
+from typing import Optional
+
+import stripe
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from config import settings
@@ -36,6 +40,21 @@ class User(AbstractUser):
 
 class Payment(models.Model):
     """Модель Платеж"""
+
+    CASH = "cash"
+    TRANSFER = "transfer"
+
+    PAY_METHOD_CHOICE = [(CASH, "Наличные"), (TRANSFER, "Перевод на счет")]
+
+    STATUS_PENDING = "pending"
+    STATUS_PAID = "paid"
+    STATUS_CANCELED = "canceled"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Ожидает оплаты"),
+        (STATUS_PAID, "Оплачено"),
+        (STATUS_CANCELED, "Отменено"),
+    ]
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -77,6 +96,27 @@ class Payment(models.Model):
         verbose_name="Ссылка на оплату",
         help_text="Ссылка на оплату",
     )
+    payment_method = models.CharField(
+        max_length=50,
+        choices=PAY_METHOD_CHOICE,
+        verbose_name="Способ оплаты",
+        help_text="Выберите способ оплаты",
+        default=TRANSFER,
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    payment_date = models.DateTimeField(
+        verbose_name="Дата оплаты",
+        default=timezone.now,
+    )
+    stripe_payment_intent_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+    stripe_status = models.CharField(max_length=50, blank=True, null=True, verbose_name="Статус Stripe")
+    stripe_amount = models.IntegerField(blank=True, null=True, verbose_name="Сумма в копейках")
+    stripe_currency = models.CharField(max_length=3, default="rub")
+    customer_email = models.EmailField(blank=True, null=True, verbose_name="Email пользователя из 'Stripe'")
 
     def __str__(self) -> str:
         """Строковое отображение платежа"""
@@ -85,7 +125,42 @@ class Payment(models.Model):
         elif self.lesson and hasattr(self.lesson, "price"):
             return str(self.lesson.price)
         else:
-            raise ValidationError("У продукта не указана цена")
+            return "У продукта не указана цена"
+
+    @property
+    def payment_status(self) -> str:
+        """Унифицированный статус платежа"""
+        if self.payment_method == self.CASH:
+            return self.status
+        return self.stripe_status or "unknown"
+
+    def refresh_from_stripe(self) -> bool:
+        """Обновляет данные из Stripe"""
+        if not self.session_id:
+            return False
+
+        try:
+            session = stripe.checkout.Session.retrieve(self.session_id)
+            self.stripe_status = str(session.payment_status)
+
+            if isinstance(session.amount_total, int):
+                self.stripe_amount = session.amount_total
+            else:
+                self.stripe_amount = int(session.amount_total) if session.amount_total is not None else None
+
+            self.stripe_currency = str(session.currency)
+
+            email = None
+            if hasattr(session, 'customer_details') and session.customer_details:
+                email = getattr(session.customer_details, 'email', None)
+            self.customer_email = email
+
+            self.save()
+            return True
+
+        except stripe.StripeError as e:
+            print(f"Stripe error: {e}")
+            return False
 
     class Meta:
         verbose_name = "Платеж"
