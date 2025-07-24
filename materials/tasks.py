@@ -27,8 +27,7 @@ def notify_subscriber(subscription_pk: int) -> None:
             [subscription.user.email],
             fail_silently=False,
         )
-        for email in subscription.user.email:
-            print(f"Найдены изменения курса, отправлено сообщение пользователю {email}")
+        print(f"Найдены изменения курса, отправлено сообщение пользователю {subscription.user.email}")
     except Exception as e:
         print(f"Ошибка: {e}")
     finally:

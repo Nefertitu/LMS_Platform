@@ -38,7 +38,7 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ("id", "course_title", "preview", "description", "owner", "is_subscribed", "lessons", "lessons_count")
+        fields = ("id", "course_title", "preview", "description", "owner", "is_subscribed", "lessons", "lessons_count", "price")
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -71,66 +71,6 @@ class LessonDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
         fields = ("id", "title", "course_title", "description", "link", "count_lessons_one_course")
-
-
-# class PaymentsSerializer(ModelSerializer):
-#     """Сериализатор для модели 'Payments'.
-#     Преобразует данные о платежах в формат API"""
-#
-#     amount_str = serializers.SerializerMethodField()
-#     payment_date = serializers.SerializerMethodField()
-#     course_title = serializers.SerializerMethodField()
-#     lesson = serializers.SerializerMethodField()
-#     customer_email = serializers.SerializerMethodField()
-#     course_owner_email = serializers.SerializerMethodField()
-#     course = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all(), required=False, allow_null=True)
-#     amount = serializers.DecimalField(max_digits=20, decimal_places=2, write_only=True, required=True)
-#
-#     def get_amount_str(self, instance: Payments) -> Optional[str]:
-#         """Возвращает сумму платежа с указанием валюты"""
-#         return f"{instance.amount} руб." if instance.amount else None
-#
-#     def get_payment_date(self, instance: Payments) -> Optional[str]:
-#         """Форматирует дату платежа в строку"""
-#         return instance.payment_date.strftime("%d.%m.%Y %H:%M") if instance.payment_date else None
-#
-#     def get_lesson(self, instance: Payments) -> Optional[str]:
-#         """Возвращает название урока"""
-#         return instance.lesson.title if instance.lesson else None
-#
-#     def get_course_title(self, instance: Payments) -> Optional[str]:
-#         """Возвращает название курса"""
-#         return instance.course.course_title if instance.course else None
-#
-#     def get_customer_email(self, instance: Payments) -> Optional[str]:
-#         """Возвращает email покупателя"""
-#         return instance.user.email if instance.user else None
-#
-#     def get_course_owner_email(self, instance: Payments) -> Optional[str]:
-#         """Возвращает email владельца"""
-#         if instance.course and instance.course.owner:
-#             return instance.course.owner.email
-#         return None
-#
-#     class Meta:
-#         model = Payments
-#         fields = (
-#             "id",
-#             "amount",
-#             "amount_str",
-#             "payment_date",
-#             "payment_method",
-#             "course",
-#             "course_title",
-#             "course_owner_email",
-#             "lesson",
-#             "customer_email",
-#         )
-#         read_only_fields = (
-#             "user",
-#             "payment_date",
-#         )
-#         write_only_fields = ("amount",)
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
