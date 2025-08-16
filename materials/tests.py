@@ -1,10 +1,8 @@
-from decimal import Decimal
-
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from materials.models import Course, Lesson, Payments, Subscription
+from materials.models import Course, Lesson, Subscription
 from users.models import User
 
 
@@ -90,7 +88,7 @@ class LessonTestCase(APITestCase):
         self.assertEqual(data, result)
 
     def test_lesson_create_invalid_link(self) -> None:
-        """Тест создания нового урока c невалидной ссылкой"""
+        """Тест создания нового урока с невалидной ссылкой"""
 
         url = reverse("materials:lesson-create")
         invalid_data = {
@@ -149,7 +147,7 @@ class CourseTestCase(APITestCase):
         self.assertEqual(data.get("course_title"), "Kotlin")
 
     def test_course_delete(self) -> None:
-        """Тест удаления урока"""
+        """Тест удаления курса"""
 
         url = reverse("materials:courses-detail", args=(self.course.pk,))
         data = {
@@ -263,7 +261,7 @@ class PaymentsTestCase(APITestCase):
         self.client.force_authenticate(user=self.customer)
 
     def test_add_payments(self) -> None:
-        """Проверка создания нового платежы"""
+        """Проверка создания нового платежа"""
         url = reverse("materials:payments-list")
         response = self.client.post(
             url,
