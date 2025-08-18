@@ -151,8 +151,8 @@ class Payment(models.Model):
             self.stripe_currency = str(session.currency)
 
             email = None
-            if hasattr(session, 'customer_details') and session.customer_details:
-                email = getattr(session.customer_details, 'email', None)
+            if hasattr(session, "customer_details") and session.customer_details:
+                email = getattr(session.customer_details, "email", None)
             self.customer_email = email
 
             self.save()

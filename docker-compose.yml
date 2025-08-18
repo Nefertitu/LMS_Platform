@@ -9,7 +9,7 @@ services:
       - /opt/lms_platform:/app
     working_dir: /app
     ports:
-      - "8000:8000"   #Изменить на 80???
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy

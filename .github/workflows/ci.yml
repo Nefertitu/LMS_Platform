@@ -101,17 +101,17 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
-            sudo mkdir -p /opt/lms_platform && \
-            sudo chown -R $USER:$USER /opt/lms_platform && \
-            sudo mkdir -p /opt/lms_platform/postgres_data && \
-            sudo mkdir -p /opt/lms_platform/redis_data && \
-            sudo mkdir -p /opt/lms_platform/celery_beat_volume && \
-            sudo chown -R 999:999 /opt/lms_platform/postgres_data && \
-            sudo chown -R 100:101 /opt/lms_platform/redis_data
-            ls -la /opt/lms_platform
-          "
+          run: |
+            ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
+              sudo mkdir -p /opt/lms_platform && \
+              sudo chown -R $USER:$USER /opt/lms_platform && \
+              sudo mkdir -p /opt/lms_platform/postgres_data && \
+              sudo mkdir -p /opt/lms_platform/redis_data && \
+              sudo mkdir -p /opt/lms_platform/celery_beat_volume && \
+              sudo chown -R 999:999 /opt/lms_platform/postgres_data && \
+              sudo chown -R 100:101 /opt/lms_platform/redis_data
+              ls -la /opt/lms_platform
+            "
 
       - name: Copy project files
         run: |

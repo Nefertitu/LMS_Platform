@@ -51,8 +51,8 @@ def create_retrieves_a_checkout_session(session_id: str) -> Dict[str, Any]:
     # print(f"Результат платежа: {session_result}")
 
     customer_email = None
-    if hasattr(session_result, 'customer_details') and session_result.customer_details:
-        customer_email = getattr(session_result.customer_details, 'email', None)
+    if hasattr(session_result, "customer_details") and session_result.customer_details:
+        customer_email = getattr(session_result.customer_details, "email", None)
 
     session_data = {
         "amount": session_result.amount_total,
