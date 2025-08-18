@@ -1,0 +1,132 @@
+name: Django CI
+
+on: [push, pull_request]
+
+env:
+     SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+     POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+
+       - name: Check out code
+         uses: actions/checkout@v4
+
+       - name: Set up Python
+         uses: actions/setup-python@v5
+         with:
+           python-version: "3.13"
+
+       - name: Install Poetry
+         run: pipx install poetry
+
+       - name: Cache Poetry virtualenv
+         uses: actions/cache@v3
+         with:
+           path: ~/.cache/pypoetry
+           key: poetry-${{ hashFiles('poetry.lock') }}
+
+  lint:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: poetry install --no-root
+
+      - name: Install flake8
+        run: poetry add --group dev flake8
+
+      - name: Run linting
+        run: poetry run flake8 .
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+
+    - name: Install Poetry
+      run: pipx install poetry
+
+    - name: Install dependencies
+      run: |
+        poetry config virtualenvs.create true
+        poetry install --no-interaction --no-root
+
+    - name: Run tests
+      run: python manage.py test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/lms_platform:${{ github.sha }} .
+
+      - name: Push Docker image to Docker Hub
+        run: docker push ${{ secrets.DOCKER_HUB_USERNAME }}/lms_platform:${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Create required directories
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
+            sudo mkdir -p /opt/lms_platform && \
+            sudo chown -R $USER:$USER /opt/lms_platform && \
+            sudo mkdir -p /opt/lms_platform/postgres_data && \
+            sudo mkdir -p /opt/lms_platform/redis_data && \
+            sudo mkdir -p /opt/lms_platform/celery_beat_volume && \
+            sudo chown -R 999:999 /opt/lms_platform/postgres_data && \
+            sudo chown -R 100:101 /opt/lms_platform/redis_data
+            ls -la /opt/lms_platform
+          "
+
+      - name: Copy project files
+        run: |
+          rsync -avz --delete \
+            --exclude=.git \
+            --exclude=.env \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/opt/lms_platform/
+
+      - name: Deploy with Docker Compose
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
+            cd /opt/lms_platform && \
+            echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' > .env && \
+            echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env && \
+            echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env && \
+            docker-compose down && \
+            docker-compose up -d --build
+          "
