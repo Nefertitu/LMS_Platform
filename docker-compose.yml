@@ -1,0 +1,78 @@
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      - DEBUG=True
+      - DATABASE_HOST=db
+    volumes:
+      - .:/app
+    working_dir: /app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    user: appuser
+
+  db:
+    image: postgres:16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:6.2
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 30s
+      retries: 3
+
+  celery:
+    build: .
+    command: poetry run celery -A config worker -c 50 --loglevel=info
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    user: appuser
+    working_dir: /app
+    environment:
+      - C_FORCE_ROOT=false
+    restart: unless-stopped
+
+  celery-beat:
+    build: .
+    command: poetry run celery -A config beat --scheduler django_celery_beat.schedulers:DatabaseScheduler -s /var/celerybeat-schedule/celerybeat-schedule --loglevel=info
+    env_file: .env
+    volumes:
+      - .:/app
+      - celery_beat_volume:/var/celerybeat-schedule
+    depends_on:
+      - db
+      - redis
+    user: appuser
+    working_dir: /app
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  celery_beat_volume:

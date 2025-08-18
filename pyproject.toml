@@ -4,6 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Olga Kazorina <nefertituolga@gmail.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.13"
@@ -24,7 +25,6 @@ drf-yasg = "^1.21.10"
 stripe = "^12.3.0"
 forex-python = "^1.9.2"
 celery = "^5.5.3"
-eventlet = "^0.40.1"
 redis = "^6.2.0"
 django-celery-beat = "^2.8.1"
 
@@ -35,7 +35,7 @@ flake8 = "^7.3.0"
 mypy = "^1.16.1"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.mypy]

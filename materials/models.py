@@ -1,8 +1,6 @@
 from django.db import models
-from django.utils import timezone
 
 from config import settings
-from users.models import User
 
 
 class Course(models.Model):
