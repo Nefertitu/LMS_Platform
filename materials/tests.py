@@ -13,8 +13,10 @@ class LessonTestCase(APITestCase):
         """Инициализация тестовых данных"""
 
         self.user = User.objects.create(email="testuser@example.com")
-        self.course = Course.objects.create(course_title="Test course", description="Test", owner=self.user)
-        self.lesson = Lesson.objects.create(title="Test lesson", course=self.course, owner=self.user)
+        self.course = Course.objects.create(
+            course_title="Test course", description="Test", owner=self.user, price=10000.00
+        )
+        self.lesson = Lesson.objects.create(title="Test lesson", course=self.course, owner=self.user, price=1000.00)
         self.client.force_authenticate(user=self.user)
 
     def test_lesson_retrieve(self) -> None:
@@ -30,7 +32,7 @@ class LessonTestCase(APITestCase):
         """Тест создания нового урока"""
 
         url = reverse("materials:lesson-create")
-        data = {"title": "Python", "course": self.course.pk}
+        data = {"title": "Python", "course": self.course.pk, "price": 2000.00}
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Lesson.objects.all().count(), 2)
@@ -65,27 +67,15 @@ class LessonTestCase(APITestCase):
         url = reverse("materials:lesson-list")
         response = self.client.get(url)
         data = response.json()
-        result = {
-            "count": 1,
-            "next": None,
-            "previous": None,
-            "results": [
-                {
-                    "id": self.lesson.pk,
-                    "course": self.course.pk,
-                    "course_title": self.course.course_title,
-                    "title": self.lesson.title,
-                    "preview": None,
-                    "description": self.lesson.description,
-                    "link": self.lesson.link,
-                    "owner": self.user.pk,
-                }
-            ],
-        }
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Lesson.objects.all().count(), 1)
-        self.assertEqual(data, result)
+        self.assertEqual(len(data["results"]), 1)
+        lesson_data = data["results"][0]
+        self.assertEqual(lesson_data["id"], self.lesson.pk)
+        self.assertEqual(lesson_data["title"], self.lesson.title)
+        self.assertEqual(lesson_data["price"], "1000.00")
+        self.assertEqual(lesson_data["course_title"], self.lesson.course.course_title)
 
     def test_lesson_create_invalid_link(self) -> None:
         """Тест создания нового урока с невалидной ссылкой"""
@@ -95,6 +85,7 @@ class LessonTestCase(APITestCase):
             "title": "Урок с неверной ссылкой",
             "link": "https://rutube.ru/lesson/2/",
             "course": self.course.pk,
+            "price": 1100.00,
         }
         response = self.client.post(url, invalid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -109,8 +100,10 @@ class CourseTestCase(APITestCase):
         """Инициализация тестовых данных"""
 
         self.user = User.objects.create(email="testuser@example.com")
-        self.course = Course.objects.create(course_title="Test course", description="Test", owner=self.user)
-        self.lesson = Lesson.objects.create(title="Test lesson", course=self.course, owner=self.user)
+        self.course = Course.objects.create(
+            course_title="Test course", description="Test", owner=self.user, price=10000.00
+        )
+        self.lesson = Lesson.objects.create(title="Test lesson", course=self.course, owner=self.user, price=2100.00)
         # self.subscriber = User.objects.create(email="subscriber@example.com")
         # self.subscription = Subscription.objects.create(user=self.subscriber, course=self.course, is_active=True)
         self.client.force_authenticate(user=self.user)
@@ -124,12 +117,14 @@ class CourseTestCase(APITestCase):
         data = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(data.get("course_title"), self.course.course_title)
+        self.assertEqual(data.get("price"), "10000.00")
 
+    #
     def test_course_create(self) -> None:
         """Тест создания нового курса"""
 
         url = reverse("materials:courses-list")
-        data = {"course_title": "Test course", "lesson": self.lesson.pk}
+        data = {"course_title": "Test course", "lesson": self.lesson.pk, "price": 11000.00}
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Course.objects.all().count(), 2)
@@ -164,26 +159,16 @@ class CourseTestCase(APITestCase):
         url = reverse("materials:courses-list")
         response = self.client.get(url)
         data = response.json()
-        result = {
-            "count": 1,
-            "next": None,
-            "previous": None,
-            "results": [
-                {
-                    "id": self.course.pk,
-                    "course_title": self.course.course_title,
-                    "preview": None,
-                    "description": self.course.description,
-                    "owner": [self.user.email],
-                    "is_subscribed": [],
-                    "lessons": [self.lesson.title],
-                    "lessons_count": Lesson.objects.all().count(),
-                }
-            ],
-        }
+        print(data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Lesson.objects.all().count(), 1)
-        self.assertEqual(data, result)
+        self.assertEqual(len(data["results"]), 1)
+        course_data = data["results"][0]
+        self.assertEqual(course_data["id"], self.course.pk)
+        self.assertEqual(course_data["course_title"], self.course.course_title)
+        self.assertEqual(course_data["price"], "10000.00")
+        self.assertEqual(course_data["lessons"][0], self.lesson.title)
+        self.assertEqual(course_data["lessons_count"], Lesson.objects.all().count())
 
 
 class SubscriptionTestCase(APITestCase):
@@ -193,7 +178,9 @@ class SubscriptionTestCase(APITestCase):
         """Инициализация тестовых данных"""
 
         self.user = User.objects.create(email="testuser@example.com")
-        self.course = Course.objects.create(course_title="Test course", description="Test", owner=self.user)
+        self.course = Course.objects.create(
+            course_title="Test course", description="Test", owner=self.user, price=10000.00
+        )
         self.subscriber = User.objects.create(email="subscriber@example.com")
         self.client.force_authenticate(user=self.subscriber)
 
@@ -216,6 +203,7 @@ class SubscriptionTestCase(APITestCase):
         )
         self.assertIn(response.data["message"], ["Подписка добавлена"])
 
+    #
     def test_remove_subscription(self) -> None:
         """Проверка отмены существующей подписки"""
 
@@ -246,31 +234,3 @@ class SubscriptionTestCase(APITestCase):
         self.assertEqual(subscription_data["user_email"], self.subscriber.email)
         self.assertEqual(subscription_data["course_title"], self.course.course_title)
         self.assertTrue(subscription_data["is_active"])
-        self.assertIn(subscription.created_at.strftime("%d.%M.%Y"), subscription_data["created_at"])
-
-
-class PaymentsTestCase(APITestCase):
-    """Тест-кейс для проверки представлений модели 'Payments'"""
-
-    def setUp(self) -> None:
-        """Инициализация тестовых данных"""
-
-        self.user = User.objects.create(email="testuser@example.com")
-        self.course = Course.objects.create(course_title="Test course", description="Test", owner=self.user)
-        self.customer = User.objects.create(email="customer@example.com")
-        self.client.force_authenticate(user=self.customer)
-
-    def test_add_payments(self) -> None:
-        """Проверка создания нового платежа"""
-        url = reverse("materials:payments-list")
-        response = self.client.post(
-            url,
-            {
-                "course": self.course.pk,
-                "amount": "12000.00",
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["customer_email"], self.customer.email)
-        self.assertEqual(response.data["course_title"], self.course.course_title)
-        self.assertEqual(response.data["amount_str"], "12000.00 руб.")

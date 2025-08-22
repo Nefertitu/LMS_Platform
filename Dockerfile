@@ -26,8 +26,9 @@ COPY . .
 
 RUN adduser --disabled-password --gecos '' appuser
 
-RUN mkdir -p /app/media /var/celerybeat-schedule && \
-    chown -R appuser:appuser /app/media /var/celerybeat-schedule
+RUN mkdir -p /app/static /app/staticfiles /app/static /app/media /var/celerybeat-schedule && \
+    chown -R appuser:appuser /app/static /app/staticfiles /app/static /app/media /var/celerybeat-schedule && \
+    chmod -R 755 /app/static /app/staticfiles /app/static /app/media /var/celerybeat-schedule
 
 RUN rm -rf ~/.cache/pip
 
@@ -35,4 +36,4 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["poetry", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
