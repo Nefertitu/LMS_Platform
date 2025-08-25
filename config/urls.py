@@ -26,7 +26,7 @@ urlpatterns = [
     path("", include("materials.urls", namespace="materials")),
     path("", include("users.urls", namespace="users")),
     # path("api-token-auth/", obtain_auth_token, name="api_token_auth"),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     # path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path("swagger<format>/", schema_view.without_ui(cache_timeout=0), name="schema-json"),
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
